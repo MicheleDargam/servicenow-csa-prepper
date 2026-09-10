@@ -20,8 +20,15 @@ function getRangeStart(periodo: Periodo): Date {
   return periodo === 'semana' ? getCurrentWeekDates()[0] : getStartOfMonth();
 }
 
-function computeStreak(studyDateKeys: string[]): number {
-  const uniqueDays = new Set(studyDateKeys);
+/**
+ * Counts consecutive days ending today (or yesterday, if today has no
+ * activity yet) that have at least one entry in `activityDateKeys` — a day
+ * counts whether that entry came from a Timer study session or a completed
+ * Prepper simulado/prática (see getVisaoGeral), since plenty of study
+ * happens by answering questions with the Timer never turned on.
+ */
+function computeStreak(activityDateKeys: string[]): number {
+  const uniqueDays = new Set(activityDateKeys);
   if (uniqueDays.size === 0) return 0;
 
   let streak = 0;
@@ -70,12 +77,21 @@ export async function getVisaoGeral(): Promise<VisaoGeral> {
     tentativasPrepper.reduce((sum, t) => sum + t.acertos, 0) +
     praticasPrepper.reduce((sum, p) => sum + p.acertos, 0);
 
+  // The streak counts a day as "estudei" if either the Timer logged study
+  // time OR a Prepper simulado/prática was completed that day — studying by
+  // answering questions, with the Timer off, still counts.
+  const activityDateKeys = [
+    ...studySessions.map((s) => toDateKey(s.startedAt)),
+    ...tentativasPrepper.map((t) => toDateKey(t.completedAt)),
+    ...praticasPrepper.map((p) => toDateKey(p.completedAt)),
+  ];
+
   return {
     horasSemana: secondsSince(weekStart) / 3600,
     horasMes: secondsSince(monthStart) / 3600,
     questoesRespondidas,
     taxaAcerto: questoesRespondidas > 0 ? acertosTotais / questoesRespondidas : 0,
-    streak: computeStreak(studySessions.map((s) => toDateKey(s.startedAt))),
+    streak: computeStreak(activityDateKeys),
   };
 }
 
