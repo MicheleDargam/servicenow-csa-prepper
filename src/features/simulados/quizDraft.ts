@@ -11,6 +11,8 @@ export interface QuizDraft {
   startedAt: string; // ISO
   /** Instant-feedback mode only: ids of questions already checked (answer locked + shown). */
   revealed?: number[];
+  /** Shuffled display order of each question's alternatives (questao id → original indices). */
+  ordens?: Record<number, number[]>;
 }
 
 function storageKey(draftKey: string): string {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, ArrowRight, CheckCircle2, Play, X } from 'lucide-react';
 import { QuestionCard } from './QuestionCard';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
@@ -39,6 +39,50 @@ interface QuizRunnerProps {
 
 type Phase = 'intro' | 'running';
 
+// Alternatives whose meaning depends on their position — a question with
+// any of these keeps its original order instead of being shuffled.
+const POSITIONAL_ALT = /all of the above|none of the above|todas as anteriores|nenhuma das anteriores|\b(both|options?|alternativas?) [a-e]\b|\b[a-e] (and|e) [a-e]\b/i;
+
+function shuffledIndices(n: number): number[] {
+  const arr = Array.from({ length: n }, (_, i) => i);
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function buildOrdens(questoes: Questao[]): Record<number, number[]> {
+  const ordens: Record<number, number[]> = {};
+  for (const q of questoes) {
+    const n = q.alternativas.length;
+    ordens[q.id!] = q.alternativas.some((a) => POSITIONAL_ALT.test(a))
+      ? Array.from({ length: n }, (_, i) => i)
+      : shuffledIndices(n);
+  }
+  return ordens;
+}
+
+/** Display order for a question, falling back to the original order if missing/stale. */
+function getOrdem(ordens: Record<number, number[]>, q: Questao): number[] {
+  const ordem = ordens[q.id!];
+  const n = q.alternativas.length;
+  if (ordem && ordem.length === n && [...ordem].sort((a, b) => a - b).every((v, i) => v === i)) {
+    return ordem;
+  }
+  return Array.from({ length: n }, (_, i) => i);
+}
+
+/** Question as the card should show it: alternatives (and translations) reordered, correct answer remapped to display positions. */
+function applyOrdem(q: Questao, ordem: number[]): Questao {
+  return {
+    ...q,
+    alternativas: ordem.map((i) => q.alternativas[i]),
+    alternativasPt: q.alternativasPt ? ordem.map((i) => q.alternativasPt![i]) : undefined,
+    respostaCorreta: q.respostaCorreta.map((orig) => ordem.indexOf(orig)),
+  };
+}
+
 /**
  * Generic one-question-at-a-time quiz engine: intro screen, progress bar,
  * navigation, scoring and the "unanswered questions" confirm dialog.
@@ -63,14 +107,28 @@ export function QuizRunner({ title, questoes, introHint, draftKey, instantFeedba
     initialDraft ? new Date(initialDraft.startedAt) : null,
   );
   const [revealed, setRevealed] = useState<number[]>(initialDraft?.revealed ?? []);
+  // Per-attempt shuffled display order of each question's alternatives —
+  // kept in the draft so a resume shows the same order.
+  const [ordens, setOrdens] = useState<Record<number, number[]>>(
+    () => initialDraft?.ordens ?? buildOrdens(questoes),
+  );
   const [confirmFinish, setConfirmFinish] = useState(false);
   const [showResumedBanner, setShowResumedBanner] = useState(!!initialDraft);
 
   const total = questoes.length;
-  const currentQuestao = questoes[currentIndex];
+  const currentOriginal = questoes[currentIndex];
+  const currentOrdem = currentOriginal ? getOrdem(ordens, currentOriginal) : [];
+  // `answers` always stores ORIGINAL alternative indices (so scoring and the
+  // result screen are unaffected); only the card sees the shuffled view.
+  const currentQuestao = useMemo(
+    () => (currentOriginal ? applyOrdem(currentOriginal, currentOrdem) : undefined),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [currentOriginal, currentOrdem.join(',')],
+  );
   const answeredCount = Object.values(answers).filter((a) => a.length > 0).length;
   const isLast = currentIndex === total - 1;
-  const currentSelected = currentQuestao ? (answers[currentQuestao.id!] ?? []) : [];
+  const currentSelected = currentOriginal ? (answers[currentOriginal.id!] ?? []) : [];
+  const currentSelectedDisplay = currentSelected.map((orig) => currentOrdem.indexOf(orig));
   const currentRevealed = instantFeedback && !!currentQuestao && revealed.includes(currentQuestao.id!);
   // In instant-feedback mode, an answered-but-unchecked question shows
   // "Verificar resposta" instead of moving on; an unanswered one can still
@@ -88,8 +146,9 @@ export function QuizRunner({ title, questoes, introHint, draftKey, instantFeedba
       answers,
       startedAt: startedAt.toISOString(),
       revealed,
+      ordens,
     });
-  }, [phase, draftKey, questoes, currentIndex, answers, startedAt, revealed]);
+  }, [phase, draftKey, questoes, currentIndex, answers, startedAt, revealed, ordens]);
 
   const handleStart = () => {
     setStartedAt(new Date());
@@ -100,14 +159,16 @@ export function QuizRunner({ title, questoes, introHint, draftKey, instantFeedba
     clearDraft(draftKey);
     setAnswers({});
     setRevealed([]);
+    setOrdens(buildOrdens(questoes));
     setCurrentIndex(0);
     setStartedAt(new Date());
     setShowResumedBanner(false);
   };
 
-  const handleAnswerChange = (selected: number[]) => {
-    if (!currentQuestao?.id || currentRevealed) return;
-    setAnswers((prev) => ({ ...prev, [currentQuestao.id!]: selected }));
+  const handleAnswerChange = (selectedDisplay: number[]) => {
+    if (!currentOriginal?.id || currentRevealed) return;
+    const selected = selectedDisplay.map((d) => currentOrdem[d]);
+    setAnswers((prev) => ({ ...prev, [currentOriginal.id!]: selected }));
   };
 
   const handleCheck = () => {
@@ -157,7 +218,7 @@ export function QuizRunner({ title, questoes, introHint, draftKey, instantFeedba
     }
   };
 
-  if (total === 0) return null;
+  if (total === 0 || !currentQuestao) return null;
 
   if (phase === 'intro') {
     return (
@@ -215,7 +276,7 @@ export function QuizRunner({ title, questoes, introHint, draftKey, instantFeedba
         questao={currentQuestao}
         index={currentIndex}
         total={total}
-        selected={currentSelected}
+        selected={currentSelectedDisplay}
         onChange={handleAnswerChange}
         revealed={currentRevealed}
       />
