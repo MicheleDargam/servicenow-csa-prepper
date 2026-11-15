@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, ArrowRight, Play, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle2, Play, X } from 'lucide-react';
 import { QuestionCard } from './QuestionCard';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { sameAnswerSet } from './simuladoUtils';
@@ -27,6 +27,12 @@ interface QuizRunnerProps {
    * question set — the draft is discarded if it doesn't match `questoes`.
    */
   draftKey: string;
+  /**
+   * Practice mode: after answering, the user checks the answer and sees
+   * right/wrong (plus the correct option) before moving on. Off for
+   * Simulados, which stay exam-style (results only at the end).
+   */
+  instantFeedback?: boolean;
   onBack: () => void;
   onFinish: (result: QuizResult) => void;
 }
@@ -44,7 +50,7 @@ type Phase = 'intro' | 'running';
  * accidental reload resumes exactly where it left off instead of losing the
  * attempt — this only clears once the quiz is actually submitted.
  */
-export function QuizRunner({ title, questoes, introHint, draftKey, onBack, onFinish }: QuizRunnerProps) {
+export function QuizRunner({ title, questoes, introHint, draftKey, instantFeedback = false, onBack, onFinish }: QuizRunnerProps) {
   const questaoIds = questoes.map((q) => q.id!);
   // Computed once, at mount — later prop updates (e.g. a live query
   // re-firing) shouldn't retrigger draft detection.
@@ -56,6 +62,7 @@ export function QuizRunner({ title, questoes, introHint, draftKey, onBack, onFin
   const [startedAt, setStartedAt] = useState<Date | null>(
     initialDraft ? new Date(initialDraft.startedAt) : null,
   );
+  const [revealed, setRevealed] = useState<number[]>(initialDraft?.revealed ?? []);
   const [confirmFinish, setConfirmFinish] = useState(false);
   const [showResumedBanner, setShowResumedBanner] = useState(!!initialDraft);
 
@@ -63,6 +70,12 @@ export function QuizRunner({ title, questoes, introHint, draftKey, onBack, onFin
   const currentQuestao = questoes[currentIndex];
   const answeredCount = Object.values(answers).filter((a) => a.length > 0).length;
   const isLast = currentIndex === total - 1;
+  const currentSelected = currentQuestao ? (answers[currentQuestao.id!] ?? []) : [];
+  const currentRevealed = instantFeedback && !!currentQuestao && revealed.includes(currentQuestao.id!);
+  // In instant-feedback mode, an answered-but-unchecked question shows
+  // "Verificar resposta" instead of moving on; an unanswered one can still
+  // be skipped with Próxima.
+  const showCheckButton = instantFeedback && !currentRevealed && currentSelected.length > 0;
 
   // Keep the draft in sync with every answer/navigation while the quiz is
   // running, so there's never more than one question's worth of progress
@@ -74,8 +87,9 @@ export function QuizRunner({ title, questoes, introHint, draftKey, onBack, onFin
       currentIndex,
       answers,
       startedAt: startedAt.toISOString(),
+      revealed,
     });
-  }, [phase, draftKey, questoes, currentIndex, answers, startedAt]);
+  }, [phase, draftKey, questoes, currentIndex, answers, startedAt, revealed]);
 
   const handleStart = () => {
     setStartedAt(new Date());
@@ -85,14 +99,20 @@ export function QuizRunner({ title, questoes, introHint, draftKey, onBack, onFin
   const handleRestartFromScratch = () => {
     clearDraft(draftKey);
     setAnswers({});
+    setRevealed([]);
     setCurrentIndex(0);
     setStartedAt(new Date());
     setShowResumedBanner(false);
   };
 
   const handleAnswerChange = (selected: number[]) => {
-    if (!currentQuestao?.id) return;
+    if (!currentQuestao?.id || currentRevealed) return;
     setAnswers((prev) => ({ ...prev, [currentQuestao.id!]: selected }));
+  };
+
+  const handleCheck = () => {
+    if (!currentQuestao?.id) return;
+    setRevealed((prev) => (prev.includes(currentQuestao.id!) ? prev : [...prev, currentQuestao.id!]));
   };
 
   const finish = () => {
@@ -195,8 +215,9 @@ export function QuizRunner({ title, questoes, introHint, draftKey, onBack, onFin
         questao={currentQuestao}
         index={currentIndex}
         total={total}
-        selected={answers[currentQuestao.id!] ?? []}
+        selected={currentSelected}
         onChange={handleAnswerChange}
+        revealed={currentRevealed}
       />
 
       <div className="quiz-nav">
@@ -207,10 +228,16 @@ export function QuizRunner({ title, questoes, introHint, draftKey, onBack, onFin
         >
           <ArrowLeft size={18} /> Anterior
         </button>
-        <button className="btn-primary quiz-nav-next" onClick={handleNext}>
-          {isLast ? 'Finalizar' : 'Próxima'}
-          {!isLast && <ArrowRight size={18} />}
-        </button>
+        {showCheckButton ? (
+          <button className="btn-primary quiz-nav-next" onClick={handleCheck}>
+            <CheckCircle2 size={18} /> Verificar resposta
+          </button>
+        ) : (
+          <button className="btn-primary quiz-nav-next" onClick={handleNext}>
+            {isLast ? 'Finalizar' : 'Próxima'}
+            {!isLast && <ArrowRight size={18} />}
+          </button>
+        )}
       </div>
 
       {confirmFinish && (

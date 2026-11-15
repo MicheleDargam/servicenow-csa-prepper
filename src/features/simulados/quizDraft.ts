@@ -9,6 +9,8 @@ export interface QuizDraft {
   currentIndex: number;
   answers: Record<number, number[]>;
   startedAt: string; // ISO
+  /** Instant-feedback mode only: ids of questions already checked (answer locked + shown). */
+  revealed?: number[];
 }
 
 function storageKey(draftKey: string): string {

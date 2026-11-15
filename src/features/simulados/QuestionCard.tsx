@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Check, Languages } from 'lucide-react';
-import { isMultiSelect } from './simuladoUtils';
+import { Check, CheckCircle2, Info, Languages, XCircle } from 'lucide-react';
+import { isMultiSelect, sameAnswerSet } from './simuladoUtils';
 import { TranslationPanel } from './TranslationPanel';
 import type { Questao } from '../../types';
 
@@ -10,13 +10,20 @@ interface QuestionCardProps {
   total: number;
   selected: number[];
   onChange: (selected: number[]) => void;
+  /**
+   * Instant-feedback mode (Banco de Questões / Questões Prepper): once true,
+   * the options lock and are colored correct/wrong, and a right/wrong
+   * feedback box appears below them.
+   */
+  revealed?: boolean;
 }
 
-export function QuestionCard({ questao, index, total, selected, onChange }: QuestionCardProps) {
+export function QuestionCard({ questao, index, total, selected, onChange, revealed = false }: QuestionCardProps) {
   const multi = isMultiSelect(questao);
   const [showTranslation, setShowTranslation] = useState(false);
 
   const toggle = (altIndex: number) => {
+    if (revealed) return;
     if (multi) {
       onChange(
         selected.includes(altIndex)
@@ -27,6 +34,9 @@ export function QuestionCard({ questao, index, total, selected, onChange }: Ques
       onChange([altIndex]);
     }
   };
+
+  const acertou = revealed && sameAnswerSet(selected, questao.respostaCorreta);
+  const respostasCorretas = questao.respostaCorreta.map((i) => questao.alternativas[i]);
 
   return (
     <div className="question-card">
@@ -64,6 +74,25 @@ export function QuestionCard({ questao, index, total, selected, onChange }: Ques
       <div className="question-card-options">
         {questao.alternativas.map((alt, i) => {
           const isSelected = selected.includes(i);
+
+          if (revealed) {
+            const isCorrect = questao.respostaCorreta.includes(i);
+            const state = isCorrect
+              ? 'review-option--correct'
+              : isSelected
+                ? 'review-option--wrong'
+                : '';
+            return (
+              <div key={i} className={`question-option review-option ${state}`}>
+                <span className={`question-option-mark ${multi ? 'question-option-mark--square' : ''}`}>
+                  {isCorrect && <CheckCircle2 size={14} />}
+                  {!isCorrect && isSelected && <XCircle size={14} />}
+                </span>
+                <span className="question-option-text">{alt}</span>
+              </div>
+            );
+          }
+
           return (
             <button
               key={i}
@@ -79,6 +108,26 @@ export function QuestionCard({ questao, index, total, selected, onChange }: Ques
           );
         })}
       </div>
+
+      {revealed && (
+        <div className={`quiz-feedback ${acertou ? 'quiz-feedback--correct' : 'quiz-feedback--wrong'}`}>
+          <div className="quiz-feedback-title">
+            {acertou ? <CheckCircle2 size={18} /> : <XCircle size={18} />}
+            <span>{acertou ? 'Você acertou!' : selected.length === 0 ? 'Sem resposta' : 'Você errou'}</span>
+          </div>
+          {!acertou && (
+            <p className="quiz-feedback-answer">
+              {respostasCorretas.length > 1 ? 'Respostas corretas: ' : 'Resposta correta: '}
+              <strong>{respostasCorretas.join(' · ')}</strong>
+            </p>
+          )}
+          {questao.nota && (
+            <p className="review-nota">
+              <Info size={14} /> {questao.nota}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

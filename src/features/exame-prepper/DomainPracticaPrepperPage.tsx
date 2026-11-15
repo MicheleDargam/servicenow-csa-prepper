@@ -68,6 +68,8 @@ export function DomainPracticaPrepperPage() {
         title={dominio}
         questoes={run.questoes}
         draftKey={draftKey}
+        instantFeedback
+        introHint="Responda e toque em Verificar resposta para ver na hora se acertou, antes de ir para a próxima."
         onBack={() => setRun(null)}
         onFinish={handleFinish}
       />

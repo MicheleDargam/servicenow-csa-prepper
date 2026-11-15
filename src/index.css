@@ -1575,6 +1575,52 @@ body::before {
   gap: 6px;
 }
 
+/* Instant feedback (Questões Prepper) */
+.quiz-feedback {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid;
+}
+
+.quiz-feedback--correct {
+  border-color: rgba(34, 197, 94, 0.5);
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.quiz-feedback--wrong {
+  border-color: rgba(239, 68, 68, 0.5);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.quiz-feedback-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.quiz-feedback--correct .quiz-feedback-title {
+  color: #22c55e;
+}
+
+.quiz-feedback--wrong .quiz-feedback-title {
+  color: #ef4444;
+}
+
+.quiz-feedback-answer {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.quiz-feedback-answer strong {
+  color: var(--color-text-primary);
+}
+
 /* ========================================
    RESULTADO — score & review
    ======================================== */
