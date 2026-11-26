@@ -2,6 +2,7 @@ import type { EntityTable } from 'dexie';
 import { db } from './database';
 import { DEFAULT_MATERIAS } from '../features/materias/materiaColors';
 import { BUNDLED_SIMULADOS_PREPPER, type QuestaoJSON } from '../data/simulados-prepper';
+import { BUNDLED_CAD } from '../data/cad';
 import type { Questao } from '../types';
 
 /**
@@ -101,6 +102,21 @@ export async function seedSimuladosPrepper(): Promise<void> {
 
       for (let index = 0; index < raw.questoes.length; index++) {
         await upsertQuestao(db.questoesPrepper, raw.questoes[index], index, simulado.id);
+      }
+    });
+  }
+}
+
+/**
+ * Load the bundled CAD question pool into the separate questoesCad table.
+ * No simuladoId — CAD has no fixed simulados, only practice by domain and
+ * generated exams. Same insert-or-sync-by-externalId logic as Prepper.
+ */
+export async function seedQuestoesCad(): Promise<void> {
+  for (const batch of BUNDLED_CAD) {
+    await db.transaction('rw', db.questoesCad, async () => {
+      for (let index = 0; index < batch.questoes.length; index++) {
+        await upsertQuestao(db.questoesCad, batch.questoes[index], index);
       }
     });
   }

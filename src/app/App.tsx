@@ -17,7 +17,15 @@ import { DomainPracticaPrepperPage } from '../features/exame-prepper/DomainPract
 import { ResultadoPraticaPrepperPage } from '../features/exame-prepper/ResultadoPraticaPrepperPage';
 import { HistoricoPraticaPrepperPage } from '../features/exame-prepper/HistoricoPraticaPrepperPage';
 import { SimuladoGeradoPage } from '../features/exame-prepper/SimuladoGeradoPage';
-import { seedDefaultMaterias, seedSimuladosPrepper, seedLembretePadrao } from '../db/seed';
+import { CadPage } from '../features/cad/CadPage';
+import { SimuladoGeradoCadPage } from '../features/cad/SimuladoGeradoCadPage';
+import { ResultadoCadPage } from '../features/cad/ResultadoCadPage';
+import { HistoricoCadPage } from '../features/cad/HistoricoCadPage';
+import { QuestoesCadPage } from '../features/cad/QuestoesCadPage';
+import { DomainPracticaCadPage } from '../features/cad/DomainPracticaCadPage';
+import { ResultadoPraticaCadPage } from '../features/cad/ResultadoPraticaCadPage';
+import { HistoricoPraticaCadPage } from '../features/cad/HistoricoPraticaCadPage';
+import { seedDefaultMaterias, seedSimuladosPrepper, seedQuestoesCad, seedLembretePadrao } from '../db/seed';
 
 // recharts pulls in a sizeable chunk — only fetch it when Progresso is visited
 const ProgressoPage = lazy(() =>
@@ -30,6 +38,7 @@ export function App() {
   useEffect(() => {
     seedDefaultMaterias();
     seedSimuladosPrepper();
+    seedQuestoesCad();
     seedLembretePadrao();
   }, []);
 
@@ -55,6 +64,14 @@ export function App() {
               <Route path="/exame-prepper/questoes/historico" element={<HistoricoPraticaPrepperPage />} />
               <Route path="/exame-prepper/questoes/resultado/:praticaId" element={<ResultadoPraticaPrepperPage />} />
               <Route path="/exame-prepper/:simuladoId" element={<SimuladoPrepperRunnerPage />} />
+              <Route path="/cad" element={<CadPage />} />
+              <Route path="/cad/gerado" element={<SimuladoGeradoCadPage />} />
+              <Route path="/cad/historico" element={<HistoricoCadPage />} />
+              <Route path="/cad/resultado/:tentativaId" element={<ResultadoCadPage />} />
+              <Route path="/cad/questoes" element={<QuestoesCadPage />} />
+              <Route path="/cad/questoes/dominio" element={<DomainPracticaCadPage />} />
+              <Route path="/cad/questoes/historico" element={<HistoricoPraticaCadPage />} />
+              <Route path="/cad/questoes/resultado/:praticaId" element={<ResultadoPraticaCadPage />} />
               <Route
                 path="/progresso"
                 element={

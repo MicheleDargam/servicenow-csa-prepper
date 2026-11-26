@@ -40,8 +40,7 @@ export function TimerPage() {
       {/* Header */}
       <div className="timer-page-header">
         <div>
-          <h1 className="timer-page-title">ServiceNow CSA Prepper</h1>
-          <p className="timer-page-subtitle">ServiceNow Certified System Administrator</p>
+          <h1 className="timer-page-title">ServiceNow</h1>
         </div>
         {!isTimerActive && (
           <button

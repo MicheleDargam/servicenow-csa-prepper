@@ -23,6 +23,11 @@ class StudyTimerDB extends Dexie {
   questoesPrepper!: EntityTable<Questao, 'id'>;
   tentativasPrepper!: EntityTable<TentativaSimulado, 'id'>;
   praticasPrepper!: EntityTable<SessaoPratica, 'id'>;
+  // CAD (Certified Application Developer): its own question pool, generated
+  // exam attempts and practice sessions — never mixed with the CSA ones.
+  questoesCad!: EntityTable<Questao, 'id'>;
+  tentativasCad!: EntityTable<TentativaSimulado, 'id'>;
+  praticasCad!: EntityTable<SessaoPratica, 'id'>;
 
   constructor() {
     super('CSAPrepperDB');
@@ -36,6 +41,22 @@ class StudyTimerDB extends Dexie {
       questoesPrepper: '++id, &externalId, simuladoId, tema, materia, [simuladoId+ordem]',
       tentativasPrepper: '++id, simuladoId, completedAt, [simuladoId+completedAt]',
       praticasPrepper: '++id, tema, materia, completedAt, [tema+completedAt]',
+    });
+
+    // v2: adds the CAD track — question pool (no fixed simulados), generated
+    // exam attempts and practice sessions.
+    this.version(2).stores({
+      subjects: '++id, name, createdAt',
+      sessions: '++id, subjectId, startedAt, [subjectId+startedAt]',
+      tasks: '++id, subjectId, date, [subjectId+date]',
+      lembretes: '++id, tipo',
+      simuladosPrepper: '++id, &nome, createdAt',
+      questoesPrepper: '++id, &externalId, simuladoId, tema, materia, [simuladoId+ordem]',
+      tentativasPrepper: '++id, simuladoId, completedAt, [simuladoId+completedAt]',
+      praticasPrepper: '++id, tema, materia, completedAt, [tema+completedAt]',
+      questoesCad: '++id, &externalId, tema, materia',
+      tentativasCad: '++id, completedAt',
+      praticasCad: '++id, tema, materia, completedAt, [tema+completedAt]',
     });
   }
 }

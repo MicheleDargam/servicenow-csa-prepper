@@ -1,10 +1,11 @@
 import { NavLink } from 'react-router-dom';
-import { Timer, CheckSquare, GraduationCap, BarChart3 } from 'lucide-react';
+import { Timer, CheckSquare, GraduationCap, Code2, BarChart3 } from 'lucide-react';
 
 const tabs = [
   { path: '/', icon: Timer, label: 'Timer' },
   { path: '/tarefas', icon: CheckSquare, label: 'Tarefas' },
-  { path: '/exame-prepper', icon: GraduationCap, label: 'Prepper' },
+  { path: '/exame-prepper', icon: GraduationCap, label: 'CSA' },
+  { path: '/cad', icon: Code2, label: 'CAD' },
   { path: '/progresso', icon: BarChart3, label: 'Progresso' },
 ];
 

@@ -55,10 +55,12 @@ export interface VisaoGeral {
 }
 
 export async function getVisaoGeral(): Promise<VisaoGeral> {
-  const [sessions, tentativasPrepper, praticasPrepper] = await Promise.all([
+  const [sessions, tentativasPrepper, praticasPrepper, tentativasCad, praticasCad] = await Promise.all([
     db.sessions.toArray(),
     db.tentativasPrepper.toArray(),
     db.praticasPrepper.toArray(),
+    db.tentativasCad.toArray(),
+    db.praticasCad.toArray(),
   ]);
 
   const studySessions = sessions.filter((s) => s.type === 'study');
@@ -70,20 +72,27 @@ export async function getVisaoGeral(): Promise<VisaoGeral> {
       .filter((s) => s.startedAt >= start)
       .reduce((sum, s) => sum + s.duration, 0);
 
+  // Combined CSA (Prepper) + CAD — just an overall "how much have I practiced" total.
   const questoesRespondidas =
     tentativasPrepper.reduce((sum, t) => sum + t.total, 0) +
-    praticasPrepper.reduce((sum, p) => sum + p.total, 0);
+    praticasPrepper.reduce((sum, p) => sum + p.total, 0) +
+    tentativasCad.reduce((sum, t) => sum + t.total, 0) +
+    praticasCad.reduce((sum, p) => sum + p.total, 0);
   const acertosTotais =
     tentativasPrepper.reduce((sum, t) => sum + t.acertos, 0) +
-    praticasPrepper.reduce((sum, p) => sum + p.acertos, 0);
+    praticasPrepper.reduce((sum, p) => sum + p.acertos, 0) +
+    tentativasCad.reduce((sum, t) => sum + t.acertos, 0) +
+    praticasCad.reduce((sum, p) => sum + p.acertos, 0);
 
   // The streak counts a day as "estudei" if either the Timer logged study
-  // time OR a Prepper simulado/prática was completed that day — studying by
+  // time OR a CSA/CAD simulado/prática was completed that day — studying by
   // answering questions, with the Timer off, still counts.
   const activityDateKeys = [
     ...studySessions.map((s) => toDateKey(s.startedAt)),
     ...tentativasPrepper.map((t) => toDateKey(t.completedAt)),
     ...praticasPrepper.map((p) => toDateKey(p.completedAt)),
+    ...tentativasCad.map((t) => toDateKey(t.completedAt)),
+    ...praticasCad.map((p) => toDateKey(p.completedAt)),
   ];
 
   return {

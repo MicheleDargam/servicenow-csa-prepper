@@ -1501,6 +1501,8 @@ body::before {
   font-weight: 500;
   color: var(--color-text-primary);
   line-height: 1.5;
+  /* Keeps line breaks in multi-part stems (a/b/c/d statement lists, ACL lists, code). */
+  white-space: pre-line;
 }
 
 .question-card-options {
@@ -2454,6 +2456,7 @@ body::before {
 }
 
 .translation-enunciado {
+  white-space: pre-line;
   font-size: 0.85rem;
   color: var(--color-text-secondary);
   line-height: 1.5;
